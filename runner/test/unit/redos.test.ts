@@ -492,17 +492,20 @@ test('linear-text helpers give what the regexes they replaced gave', async () =>
 // ------------------------------------- review pages (Daybreak, 7 Nov 2026)
 
 // CPU time, not the clock, so a loaded machine's waits don't count; the
-// best of up to five, as in `fast`.
+// best of up to five, as in `fast`. Each takes under 10 ms on an idle Mac,
+// but a busy one ran one to 109 ms of CPU (an update build, 9 Nov), and the
+// regexes these replaced took seconds to hours on these inputs, so a second
+// still tells linear from not.
 function cheap<T>(what: string, fn: () => T): T {
   let best = Infinity;
   let out!: T;
-  for (let i = 0; i < 5 && best >= 100; i++) {
+  for (let i = 0; i < 5 && best >= 1000; i++) {
     const cpu = process.cpuUsage();
     out = fn();
     const { user, system } = process.cpuUsage(cpu);
     best = Math.min(best, (user + system) / 1000);
   }
-  assert.ok(best < 100, `${what} took ${Math.round(best)} ms of CPU`);
+  assert.ok(best < 1000, `${what} took ${Math.round(best)} ms of CPU`);
   return out;
 }
 
@@ -600,7 +603,7 @@ test("a review page's long runs are read in linear time", () => {
 
 test("a pinned page near the 4 MiB it reads is checked in linear time", () => {
   // hasScriptMarks (ced7de1e): every input here is at the cap the runner
-  // reads a page to, and none may take a tenth of a second.
+  // reads a page to, and each is linear (`cheap`).
   const size = 4 * 1024 * 1024;
   const pages: [string, boolean][] = [
     ['<'.repeat(size), false],
